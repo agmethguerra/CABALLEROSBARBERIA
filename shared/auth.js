@@ -25,6 +25,6 @@ async function login(username, pass){
   return session;
 }
 function currentUser(){ return JSON.parse(localStorage.getItem('session') || 'null'); }
-function logout(){ localStorage.removeItem('session'); location.href = '/login.html'; }
+function logout(){ localStorage.removeItem('session'); location.href = './index.html'; }
 
 window.auth = { seedDefaultUsers, login, currentUser, logout };
