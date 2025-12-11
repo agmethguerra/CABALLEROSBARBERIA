@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <title>Login — Caballeros Barbería</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/shared/styles.css">
-  <script src="/shared/db.js"></script>
-  <script src="/shared/auth.js"></script>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./shared/styles.css">
+  <script src="./shared/db.js"></script>
+  <script src="./shared/auth.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async ()=> {
       await openDB();
@@ -17,8 +17,8 @@
       const p = document.getElementById('pass').value;
       const s = await auth.login(u,p);
       if(!s){ alert('Credenciales incorrectas'); return; }
-      if(s.role === 'admin') location.href = '/admin/index.html';
-      else location.href = '/barber/index.html';
+      if(s.role === 'admin') location.href = './admin/index.html';
+      else location.href = './barber/index.html';
     }
   </script>
 </head>

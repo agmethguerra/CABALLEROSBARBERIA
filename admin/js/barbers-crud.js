@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
 async function checkAdmin(){
   const s = auth.currentUser();
-  if(!s || s.role !== 'admin') location.href = '/login.html';
+  if(!s || s.role !== 'admin') location.href = './login.html';
   document.getElementById('adminName').innerText = s.name || s.username;
 }
 
