@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Barbero</title>
+  <link rel="stylesheet" href="/shared/styles.css">
+  <script src="/shared/db.js"></script>
+  <script src="/shared/auth.js"></script>
+  <script src="/shared/utils.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="brand">Panel Barbero</div>
+      <div>
+        <span id="barberName" class="small-muted"></span>
+        <button class="btn" onclick="auth.logout()">Salir</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>Registrar corte</h4>
+      <div class="form-row">
+        <input id="price" type="number" class="input" placeholder="Precio del corte">
+        <input id="extraName" class="input" placeholder="Extra nombre">
+        <input id="extraValue" type="number" class="input" placeholder="Valor extra">
+        <select id="method" class="input"><option>Efectivo</option><option>Nequi</option><option>Bancolombia</option><option>Otro</option></select>
+        <button id="btnAddExtra" class="btn">Agregar extra</button>
+        <button id="btnSaveCut" class="btn" style="background:var(--brand);color:white">Guardar corte</button>
+      </div>
+      <div id="extrasBox" style="margin-top:8px"></div>
+      <div class="small-muted">Se resta $2.000 por regla de la barbería. El restante se divide 50/50.</div>
+    </div>
+
+    <div class="card">
+      <h4>Mis cortes recientes</h4>
+      <div style="overflow:auto;max-height:300px">
+        <table class="table"><thead><tr><th>Fecha</th><th>Total</th><th>Mi gana</th></tr></thead><tbody id="myCuts"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/barber/js/barber-app.js"></script>
+</body>
+</html>
