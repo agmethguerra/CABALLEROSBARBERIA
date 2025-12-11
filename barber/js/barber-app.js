@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   user = auth.currentUser();
   if (!user || user.role !== 'barber') {
-    return location.href = './login.html';
+    return location.href = './index.html';
   }
 
   document.getElementById('barberName').innerText = user.name || user.username;
