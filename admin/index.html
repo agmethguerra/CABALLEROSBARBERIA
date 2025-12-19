@@ -1,125 +1,88 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>Admin — Caballeros Barbería</title>
+  <meta charset="UTF-8">
+  <title>Admin | Caballeros Barbería</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- ESTILOS -->
   <link rel="stylesheet" href="../shared/styles.css">
 
+  <!-- LIBRERÍAS PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- CORE -->
   <script src="../shared/db.js"></script>
   <script src="../shared/auth.js"></script>
   <script src="../shared/utils.js"></script>
-
-  <!-- Librerías para PDF -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 
 <body>
-  <div class="container">
 
-    <!-- HEADER -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div class="brand">Panel Admin</div>
-      <div>
-        <span id="adminName" class="small-muted"></span>
-        <button class="btn" onclick="auth.logout()">Cerrar sesión</button>
-      </div>
-    </div>
+<div class="container">
 
-    <!-- ================== CRUD BARBEROS ================== -->
-    <div class="card">
-      <h4>Barberos</h4>
-
-      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <input id="b_username" class="input" placeholder="Usuario (único)">
-        <input id="b_pass" class="input" placeholder="Contraseña">
-        <input id="b_name" class="input" placeholder="Nombre visible">
-
-        <button id="btnAddBarber" class="btn" style="background:var(--brand);color:white">
-          Crear
-        </button>
-      </div>
-
-      <div id="barbersList"></div>
-    </div>
-
-
-    <!-- ================== FACTURAS ================== -->
-    <div class="card">
-      <h4>Facturas</h4>
-
-      <!-- Filtros -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <input id="f_from" type="date" class="input">
-        <input id="f_to" type="date" class="input">
-
-        <select id="f_barber" class="input">
-          <option value="">Todos</option>
-        </select>
-
-        <button id="btnFilterInvoices" class="btn">Aplicar</button>
-        <button id="btnClearInvoices" class="btn">Reset</button>
-        <button id="btnExportAll" class="btn">Exportar PDF</button>
-      </div>
-
-      <!-- TABLA -->
-      <div style="overflow:auto;max-height:350px">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Barbero</th>
-              <th>Total corte</th>
-              <th>Barbería</th>
-              <th>Barbero</th>
-              <th>Método</th>
-              <th>Extras</th> <!-- NUEVA COLUMNA -->
-              <th></th>
-            </tr>
-          </thead>
-
-          <tbody id="invoicesTable"></tbody>
-        </table>
-      </div>
-    </div>
-
-
-    <!-- ================== NÓMINA ================== -->
-    <div class="card">
-      <h4>Nómina por barbero</h4>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <select id="p_barber" class="input">
-          <option value="">Selecciona barbero</option>
-        </select>
-
-        <input id="p_from" type="date" class="input">
-        <input id="p_to" type="date" class="input">
-
-        <button id="btnGeneratePayroll" class="btn" style="background:var(--brand);color:white">
-          Generar nómina
-        </button>
-      </div>
-
-      <div id="payrollList"></div>
-    </div>
-
+  <!-- ================= HEADER ================= -->
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <h2>Panel Administrador</h2>
+    <button class="btn" onclick="auth.logout()">Cerrar sesión</button>
   </div>
 
+  <!-- ================= FACTURACIÓN ================= -->
+  <div class="card">
+    <h3>Facturación completa</h3>
+    <div style="overflow:auto;max-height:300px">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Barbero</th>
+            <th>Cliente</th>
+            <th>Descripción</th>
+            <th>Corte</th>
+            <th>Extras</th>
+            <th>Barbero</th>
+            <th>Barbería</th>
+          </tr>
+        </thead>
+        <tbody id="invoiceList"></tbody>
+      </table>
+    </div>
+  </div>
 
-  <!-- SCRIPTS -->
-  <script src="../admin/js/barbers-crud.js"></script>
-  <script src="../admin/js/admin-app.js"></script>
-  <script src="../admin/js/reports.js"></script>
-  <script src="../admin/js/payroll.js"></script>
-  <script src="../admin/js/pdf.js"></script>
+  <!-- ================= NÓMINAS ================= -->
+  <div class="card">
+    <h3>Nómina por barbero</h3>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('../sw.js');
-    }
-  </script>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select id="p_barber" class="input"></select>
+      <input type="date" id="p_from" class="input">
+      <input type="date" id="p_to" class="input">
+      <button id="btnGeneratePayroll" class="btn">Generar nómina</button>
+    </div>
+
+    <div id="payrollList" style="margin-top:10px"></div>
+  </div>
+
+  <!-- ================= BALANCE GENERAL ================= -->
+  <div class="card">
+    <h3>Balance general</h3>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="date" id="b_from" class="input">
+      <input type="date" id="b_to" class="input">
+      <button id="btnGenerateBalance" class="btn">
+        Generar balance
+      </button>
+    </div>
+
+    <div id="balanceList" style="margin-top:10px"></div>
+  </div>
+
+</div>
+
+<!-- ================= SCRIPT ÚNICO ================= -->
+<script src="./js/admin-app.js"></script>
 
 </body>
 </html>

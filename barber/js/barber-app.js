@@ -1,117 +1,130 @@
 // barber/js/barber-app.js
-let extras = [];
-let user;
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   await openDB();
-
-  user = auth.currentUser();
-  if (!user || user.role !== 'barber') {
-    return location.href = '../index.html';
-  }
-
-  document.getElementById('barberName').innerText = user.name || user.username;
-
-  bindEvents();
-  await loadMyCuts();
+  await auth.seedDefaultUsers();
+  checkBarber();
+  bindInvoiceAction();
+  loadMyInvoices();
 });
 
-/* -------------------- EVENTOS -------------------- */
+/* ===================== VALIDAR BARBERO ===================== */
 
-function bindEvents() {
+function checkBarber() {
+  const u = auth.currentUser();
+  if (!u || u.role !== "barber") {
+    location.href = "../login.html";
+    return;
+  }
+  document.getElementById("barberName").innerText =
+    u.name || u.username;
+}
 
-  // Agregar extra (solo para barbería)
-  document.getElementById('btnAddExtra').onclick = (e) => {
-    e.preventDefault();
-    const n = document.getElementById('extraName').value.trim();
-    const v = Number(document.getElementById('extraValue').value);
-    if (!n || !v) return alert('Extra inválido');
+/* ===================== REGISTRAR FACTURA ===================== */
 
-    extras.push({ name: n, value: v });
-    renderExtrasBox();
+function bindInvoiceAction() {
+  const btn = document.getElementById("btnInvoice");
 
-    document.getElementById('extraName').value = '';
-    document.getElementById('extraValue').value = '';
-  };
+  btn.onclick = async () => {
 
-  // Guardar corte
-  document.getElementById('btnSaveCut').onclick = async (e) => {
-    e.preventDefault();
+    const barber = auth.currentUser().username;
 
-    const price = Number(document.getElementById('price').value);
-    const method = document.getElementById('method').value;
-    if (!price) return alert('Ingresa el precio del corte');
+    // 🔹 DATOS DEL CLIENTE
+    const clientName = document.getElementById("clientName").value.trim();
+    const description = document.getElementById("description").value.trim();
 
-    const extrasSum = extras.reduce((s, x) => s + Number(x.value), 0);
+    if (!clientName) return alert("Debes ingresar el nombre del cliente");
+    if (!description) return alert("Debes ingresar la descripción del corte");
 
-    // --------- LÓGICA CORRECTA ---------
-    // 1. Restar 2000 SOLO del corte
-    const corteNeto = price - 2000;
+    // 🔹 CORTE
+    const price = Number(document.getElementById("price").value);
+    if (!price || price <= 0) return alert("Precio del corte inválido");
 
-    // 2. Dividir en 50/50
-    const barberoGanancia = Math.round(corteNeto / 2);   // mitad para barbero
-    const barberiaBase = Math.round(corteNeto / 2);      // mitad para barbería
+    const method = document.getElementById("method").value;
 
-    // 3. Sumar extras SOLO a la barbería
-    const barberiaGanancia = barberiaBase + extrasSum;
+    // 🔹 EXTRAS
+    const extras = [];
+    document.querySelectorAll(".extra-row").forEach(row => {
+      const name = row.querySelector(".extra-name").value.trim();
+      const value = Number(row.querySelector(".extra-value").value);
 
-    // 4. El barbero ve como TOTAL → SOLO el precio del corte
-    const totalCorte = price;
+      if (name && value > 0) {
+        extras.push({ name, value });
+      }
+    });
 
-    const rec = {
+    const extrasSum = extras.reduce((a, b) => a + b.value, 0);
+
+    /* ===================== LÓGICA FINANCIERA (NO TOCAR) ===================== */
+
+    const SERVICE_FEE = 2000;
+
+    const netCut = price - SERVICE_FEE;
+    if (netCut < 0) return alert("El precio del corte no cubre el servicio");
+
+    const half = netCut / 2;
+
+    const barbero = half;
+    const barberia = half + extrasSum;
+
+    /* ===================== FACTURA ===================== */
+
+    const invoice = {
+      id: Date.now(),
       date: new Date().toISOString(),
-      barber: user.username,
-      price,                // precio ORIGINAL del corte
+
+      barber,
+      clientName,
+      description,
+
+      price,
+      gross: price,
+
       extras,
       extrasSum,
-      method,
 
-      gross: totalCorte,     // total del corte SIN extras
-      barbero: barberoGanancia,
-      barberia: barberiaGanancia
+      barbero,
+      barberia,
+
+      method
     };
 
-    await add('invoices', rec);
+    await add("invoices", invoice);
 
-    extras = [];
-    renderExtrasBox();
-    document.getElementById('price').value = '';
-
-    await loadMyCuts();
-    alert('Corte registrado exitosamente');
+    clearForm();
+    loadMyInvoices();
   };
 }
 
-/* -------------------- EXTRA BOX -------------------- */
+/* ===================== LIMPIAR FORM ===================== */
 
-function renderExtrasBox() {
-  document.getElementById('extrasBox').innerHTML = extras.map((e, i) =>
-    `<div>
-       ${e.name} - ${utils.formatCurrency(e.value)}
-       <button onclick="removeExtra(${i})" class="btn">x</button>
-     </div>`
-  ).join('');
+function clearForm() {
+  document.getElementById("clientName").value = "";
+  document.getElementById("description").value = "";
+  document.getElementById("price").value = "";
+
+  document.querySelectorAll(".extra-row").forEach(row => row.remove());
 }
 
-function removeExtra(i) {
-  extras.splice(i, 1);
-  renderExtrasBox();
-}
+/* ===================== MIS FACTURAS ===================== */
 
-/* -------------------- TABLA DEL BARBERO -------------------- */
-
-async function loadMyCuts() {
-  const all = await getAll('invoices');
+async function loadMyInvoices() {
+  const barber = auth.currentUser().username;
+  const all = await getAll("invoices");
 
   const mine = all
-    .filter(x => x.barber === user.username)
+    .filter(i => i.barber === barber)
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  document.getElementById('myCuts').innerHTML = mine.map(m =>
-    `<tr>
-       <td>${new Date(m.date).toLocaleString()}</td>
-       <td>${utils.formatCurrency(m.gross)}</td>       <!-- total del corte -->
-       <td>${utils.formatCurrency(m.barbero)}</td>     <!-- mi ganancia -->
-     </tr>`
-  ).join('');
+  const tbody = document.getElementById("myInvoices");
+
+  tbody.innerHTML = mine.map(i => `
+    <tr>
+      <td>${new Date(i.date).toLocaleString()}</td>
+      <td>${i.clientName}</td>
+      <td>${i.description}</td>
+      <td>${utils.formatCurrency(i.gross)}</td>
+      <td>${utils.formatCurrency(i.barbero)}</td>
+    </tr>
+  `).join("");
 }
