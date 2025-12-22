@@ -18,6 +18,8 @@ function checkBarber() {
   }
   document.getElementById("barberName").innerText =
     u.name || u.username;
+  document.getElementById("welcomeBarber").innerText =
+  `Hola ${u.name || u.username}, Bienvenid@`;
 }
 
 /* ===================== REGISTRAR FACTURA ===================== */
@@ -56,16 +58,35 @@ function bindInvoiceAction() {
     const extrasSum = extras.reduce((a, b) => a + b.value, 0);
 
     /* ===================== LÓGICA FINANCIERA (NO TOCAR) ===================== */
+    
+    let barbero = 0;
+    let barberia = 0;
 
-    const SERVICE_FEE = 2000;
+    if (price < 20000) {
+      const FIXED_FEE = 11000;
 
-    const netCut = price - SERVICE_FEE;
-    if (netCut < 0) return alert("El precio del corte no cubre el servicio");
+      barberia = FIXED_FEE + extrasSum;
+      barbero = price - FIXED_FEE;
 
-    const half = netCut / 2;
+      if (barbero < 0) {
+        alert("El precio del corte no cubre el servicio");
+        return;
+      }
 
-    const barbero = half;
-    const barberia = half + extrasSum;
+    } else {
+      const SERVICE_FEE = 2000;
+
+      const netCut = price - SERVICE_FEE;
+      if (netCut < 0) {
+        alert("El precio del corte no cubre el servicio");
+        return;
+      }
+
+      const half = netCut / 2;
+
+      barbero = half;
+      barberia = half + extrasSum + SERVICE_FEE;
+    }
 
     /* ===================== FACTURA ===================== */
 

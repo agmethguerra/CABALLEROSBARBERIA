@@ -68,8 +68,21 @@ async function loadInvoices() {
       </td>
       <td>${utils.formatCurrency(i.barbero)}</td>
       <td>${utils.formatCurrency(i.barberia)}</td>
+      <td>
+        <button
+          class="btn"
+          style="background:#e53935;color:white"
+          onclick="deleteInvoice(${i.id})">
+          Eliminar
+        </button>
+      </td>
     </tr>
   `).join("");
+}
+async function deleteInvoice(id) {
+  if (!confirm("¿Eliminar esta facturación?")) return;
+  await remove("invoices", id);
+  await loadInvoices();
 }
 
 /* ===================== NÓMINAS ===================== */
