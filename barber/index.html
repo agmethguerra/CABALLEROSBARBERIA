@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Barbero | Caballeros Barbería</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <script src="../shared/db.js"></script>
+  <script src="../shared/auth.js"></script>
+  <script src="../shared/utils.js"></script>
+  <style>
+    .method-btns { display:flex; gap:8px; }
+    .method-btn { flex:1; padding:10px 8px; border:2px solid var(--border); border-radius:10px; background:var(--bg2); color:var(--text-muted); font-size:14px; font-weight:500; cursor:pointer; transition:all var(--transition); text-align:center; }
+    .method-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,0.08); }
+    .extra-row { display:flex; gap:8px; margin-top:8px; align-items:center; animation: slideUp 0.2s ease; }
+    @keyframes slideUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    .breakdown-box { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-top:12px; display:none; }
+    .breakdown-box.visible { display:block; }
+    .breakdown-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; }
+    .breakdown-row.total { border-top:1px solid var(--border); margin-top:8px; padding-top:10px; font-weight:600; }
+    .today-banner { background:linear-gradient(135deg, var(--brand-dark), rgba(139,0,0,0.3)); border:1px solid rgba(139,0,0,0.4); border-radius:var(--radius); padding:14px 18px; display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+    .service-presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+    .preset-btn { padding:6px 14px; border:1px solid var(--border); border-radius:20px; background:var(--bg2); color:var(--text-muted); font-size:13px; cursor:pointer; transition:all var(--transition); white-space:nowrap; }
+    .preset-btn:hover { border-color:var(--gold); color:var(--gold); }
+    .invoice-row-actions { display:flex; gap:6px; }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div>
+      <div class="navbar-title">Caballeros</div>
+      <div class="navbar-subtitle" id="barberRoleBadge">Barbero</div>
+    </div>
+  </div>
+  <div class="navbar-user">
+    <span class="navbar-user-name" id="barberName"></span>
+    <button class="btn btn-ghost btn-sm" onclick="auth.logout()">Salir</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- BANNER DÍA -->
+  <div class="today-banner">
+    <div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em">Hoy</div>
+      <div id="welcomeBarber" style="font-family:var(--font-display);font-size:20px;color:#fff"></div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:rgba(255,255,255,0.5)">Tu ganancia hoy</div>
+      <div id="todayEarnings" style="font-family:var(--font-display);font-size:26px;color:rgb(13, 174, 13);font-weight:600">$ 0</div>
+      <div id="todayCuts" style="font-size:12px;color:rgba(255,255,255,0.4)">0 cortes</div>
+    </div>
+  </div>
+
+  <!-- REGISTRAR CORTE -->
+  <div class="card">
+    <h3 class="card-title">Registrar corte</h3>
+
+    <!-- PRESETS RÁPIDOS -->
+    <div style="margin-bottom:14px">
+      <div class="form-label" style="margin-bottom:8px">Servicios comunes</div>
+      <div class="service-presets" id="servicePresets"></div>
+    </div>
+
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label class="form-label">Cliente</label>
+        <input id="clientName" class="input" placeholder="Nombre del cliente">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción del servicio</label>
+        <input id="description" class="input" placeholder="Ej: Corte degradado + barba">
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group" style="max-width:180px">
+        <label class="form-label">Precio del corte</label>
+        <input id="price" type="number" class="input" placeholder="0" min="0" oninput="updateBreakdown()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Método de pago</label>
+        <div class="method-btns">
+          <button class="method-btn active" data-method="Efectivo" onclick="selectMethod(this)">Efectivo</button>
+          <button class="method-btn" data-method="Transferencia" onclick="selectMethod(this)">Transferencia</button>
+          <button class="method-btn" data-method="Nequi" onclick="selectMethod(this)">🟣 Nequi</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXTRAS -->
+    <div id="extrasContainer"></div>
+    <button class="btn btn-ghost btn-sm mt-8" onclick="addExtraRow()" type="button">+ Agregar extra</button>
+
+    <!-- DESGLOSE EN VIVO -->
+    <div class="breakdown-box" id="breakdownBox">
+      <div class="form-label" style="margin-bottom:10px">Desglose de pago</div>
+      <div class="breakdown-row">
+        <span class="text-muted">Valor corte</span>
+        <span id="bdCut">-</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="text-muted">Extras</span>
+        <span id="bdExtras">-</span>
+      </div>
+      <div class="breakdown-row total">
+        <span>Tu ganancia</span>
+        <span id="bdBarber" class="text-success fw-600">-</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="text-muted">Para la barbería</span>
+        <span id="bdBarberia">-</span>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <button id="btnInvoice" class="btn btn-gold btn-lg btn-block">
+        Registrar corte
+      </button>
+    </div>
+  </div>
+
+  <!-- MIS CORTES -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <h3 class="card-title mb-0" style="margin-bottom:0">Mis cortes</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="date" id="filterDate" class="input" style="width:auto;font-size:13px;min-height:36px;padding:6px 10px">
+        <button class="btn btn-ghost btn-sm" onclick="clearDateFilter()">Todos</button>
+      </div>
+    </div>
+
+    <!-- MINI STATS -->
+    <div class="stats-grid" id="myStatsGrid" style="margin-bottom:14px"></div>
+
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Hora</th>
+            <th>Cliente</th>
+            <th>Servicio</th>
+            <th>Total</th>
+            <th>Método</th>
+            <th>Mi ganancia</th>
+          </tr>
+        </thead>
+        <tbody id="myInvoices"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── PRESETS DE SERVICIOS ─────────────────────────────────────
+const SERVICE_PRESETS = [
+  { label: 'Corte clásico', desc: 'Corte clásico', price: 20000 },
+  { label: 'Barba', desc: 'Arreglo de barba', price: 12000 },
+];
+
+let _currentMethod = 'Efectivo';
+let _filterDate = '';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await openDB();
+  await auth.seedDefaultUsers();
+  checkBarber();
+  bindInvoiceAction();
+  renderPresets();
+  document.getElementById('filterDate').addEventListener('change', e => {
+    _filterDate = e.target.value;
+    loadMyInvoices();
+  });
+  await loadMyInvoices();
+});
+
+function checkBarber() {
+  const u = auth.currentUser();
+  if (!u || u.role !== 'barber') { location.href = '../login.html'; return; }
+  document.getElementById('barberName').innerText = u.name || u.username;
+  document.getElementById('welcomeBarber').innerText = `Bienvenido, ${u.name || u.username}`;
+}
+
+function renderPresets() {
+  const container = document.getElementById('servicePresets');
+  container.innerHTML = SERVICE_PRESETS.map((p, i) => `
+    <button class="preset-btn" onclick="applyPreset(${i})">${p.label}</button>
+  `).join('');
+}
+
+function applyPreset(i) {
+  const p = SERVICE_PRESETS[i];
+  document.getElementById('description').value = p.desc;
+  document.getElementById('price').value = p.price;
+  updateBreakdown();
+}
+
+function selectMethod(btn) {
+  document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _currentMethod = btn.dataset.method;
+}
+
+function addExtraRow() {
+  const div = document.createElement('div');
+  div.className = 'extra-row';
+  div.innerHTML = `
+    <div class="form-group" style="flex:2">
+      <input class="input extra-name" placeholder="Nombre extra" oninput="updateBreakdown()">
+    </div>
+    <div class="form-group" style="max-width:130px">
+      <input class="input extra-value" type="number" placeholder="Valor" oninput="updateBreakdown()">
+    </div>
+    <button class="btn btn-danger btn-sm" type="button" onclick="this.parentNode.remove();updateBreakdown()">✕</button>
+  `;
+  document.getElementById('extrasContainer').appendChild(div);
+}
+
+function calcBreakdown() {
+  const price = Number(document.getElementById('price').value) || 0;
+  const extras = [];
+  document.querySelectorAll('.extra-row').forEach(row => {
+    const name  = row.querySelector('.extra-name').value.trim();
+    const value = Number(row.querySelector('.extra-value').value) || 0;
+    if (name && value > 0) extras.push({ name, value });
+  });
+  const extrasSum = extras.reduce((a, b) => a + b.value, 0);
+  let barbero = 0, barberia = 0;
+  if (price > 0) {
+    if (price < 20000) {
+      const FIXED_FEE = 11000;
+      barberia = FIXED_FEE + extrasSum;
+      barbero  = price - FIXED_FEE;
+    } else {
+      const SERVICE_FEE = 2000;
+      const net  = price - SERVICE_FEE;
+      const half = net / 2;
+      barbero  = half;
+      barberia = half + extrasSum + SERVICE_FEE;
+    }
+  }
+  return { price, extras, extrasSum, barbero, barberia };
+}
+
+function updateBreakdown() {
+  const { price, extrasSum, barbero, barberia } = calcBreakdown();
+  const box = document.getElementById('breakdownBox');
+  if (price <= 0) { box.classList.remove('visible'); return; }
+  box.classList.add('visible');
+  document.getElementById('bdCut').textContent     = utils.formatCurrency(price);
+  document.getElementById('bdExtras').textContent  = extrasSum > 0 ? utils.formatCurrency(extrasSum) : '—';
+  document.getElementById('bdBarber').textContent  = utils.formatCurrency(barbero);
+  document.getElementById('bdBarberia').textContent = utils.formatCurrency(barberia);
+}
+
+function bindInvoiceAction() {
+  document.getElementById('btnInvoice').onclick = async () => {
+    const barber      = auth.currentUser().username;
+    const clientName  = document.getElementById('clientName').value.trim();
+    const description = document.getElementById('description').value.trim();
+    if (!clientName)  { utils.showToast('Ingresa el nombre del cliente', 'error'); return; }
+    if (!description) { utils.showToast('Ingresa la descripción', 'error'); return; }
+
+    const { price, extras, extrasSum, barbero, barberia } = calcBreakdown();
+    if (!price || price <= 0) { utils.showToast('Precio inválido', 'error'); return; }
+    if (barbero < 0) { utils.showToast('El precio no cubre el servicio mínimo', 'error'); return; }
+
+    const invoice = {
+      id: Date.now(), date: new Date().toISOString(),
+      barber, clientName, description,
+      price, gross: price, extras, extrasSum,
+      barbero, barberia,
+      method: _currentMethod
+    };
+    await add('invoices', invoice);
+    clearForm();
+    await loadMyInvoices();
+    utils.showToast('Corte registrado', 'success');
+  };
+}
+
+function clearForm() {
+  document.getElementById('clientName').value  = '';
+  document.getElementById('description').value = '';
+  document.getElementById('price').value       = '';
+  document.querySelectorAll('.extra-row').forEach(r => r.remove());
+  document.getElementById('breakdownBox').classList.remove('visible');
+}
+
+function clearDateFilter() {
+  _filterDate = '';
+  document.getElementById('filterDate').value = '';
+  loadMyInvoices();
+}
+
+async function loadMyInvoices() {
+  const barber = auth.currentUser().username;
+  const all    = await getAll('invoices');
+  const today  = new Date().toDateString();
+
+  let mine = all.filter(i => i.barber === barber).sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  // stats de hoy
+  const todayInv = mine.filter(i => new Date(i.date).toDateString() === today);
+  const todayGain = todayInv.reduce((a,b) => a + Number(b.barbero), 0);
+  document.getElementById('todayEarnings').textContent = utils.formatCurrency(todayGain);
+  document.getElementById('todayCuts').textContent = `${todayInv.length} corte${todayInv.length !== 1 ? 's' : ''} hoy`;
+
+  // filtro por fecha
+  if (_filterDate) {
+    mine = mine.filter(i => i.date.startsWith(_filterDate));
+  }
+
+  // mini stats del período
+  const totalGain  = mine.reduce((a,b) => a + Number(b.barbero), 0);
+  const totalCuts  = mine.length;
+  const avgGain    = totalCuts ? totalGain / totalCuts : 0;
+  document.getElementById('myStatsGrid').innerHTML = `
+    <div class="stat-card gold-accent">
+      <div class="stat-label">Cortes</div>
+      <div class="stat-value gold">${totalCuts}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Mi ganancia</div>
+      <div class="text-success stat-value">${utils.formatCurrency(totalGain)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Promedio / corte</div>
+      <div class="stat-value">${utils.formatCurrency(Math.round(avgGain))}</div>
+    </div>
+  `;
+
+  const tbody = document.getElementById('myInvoices');
+  if (!mine.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="icon"></span><p>Sin registros para este período</p></div></td></tr>`;
+    return;
+  }
+
+  const methodBadge = (m) => {
+    const map = { 'Efectivo':'badge-success', 'Transferencia':'badge-warning', 'Nequi':'badge-gold' };
+    return `<span class="badge ${map[m] || 'badge-muted'}">${m || '—'}</span>`;
+  };
+
+  tbody.innerHTML = mine.map(i => `
+    <tr>
+      <td class="small-muted">${utils.formatDateTime(i.date)}</td>
+      <td class="fw-600">${i.clientName}</td>
+      <td>${i.description}</td>
+      <td>${utils.formatCurrency(i.gross)}</td>
+      <td>${methodBadge(i.method)}</td>
+      <td class="text-success fw-600">${utils.formatCurrency(i.barbero)}</td>
+    </tr>
+  `).join('');
+}
+</script>
+</body>
+</html>

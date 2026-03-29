@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin | Caballeros Barbería</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="../shared/db.js"></script>
+  <script src="../shared/auth.js"></script>
+  <script src="../shared/utils.js"></script>
+  <style>
+    .tab-content { display:none; }
+    .tab-content.active { display:block; animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+    /* Barbers CRUD */
+    .barber-item { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border); transition:background var(--transition); }
+    .barber-item:hover { background:rgba(255,255,255,0.02); }
+    .barber-item:last-child { border-bottom:none; }
+    .barber-avatar { width:40px; height:40px; border-radius:10px; background:var(--brand); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; flex-shrink:0; }
+    .barber-info { flex:1; margin-left:14px; }
+    .barber-name { font-weight:600; font-size:15px; }
+    .barber-meta { font-size:12px; color:var(--text-muted); }
+
+    /* KPI highlight */
+    .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px; }
+    .kpi-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 16px; }
+    .kpi-card.accent { border-color:rgba(201,168,76,0.35); background:linear-gradient(135deg,var(--surface),rgba(201,168,76,0.04)); }
+    .kpi-icon { font-size:22px; margin-bottom:8px; }
+    .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); font-weight:600; }
+    .kpi-value { font-family:var(--font-display); font-size:22px; margin-top:4px; }
+
+    /* Barber breakdown in balance */
+    .barber-row-summary { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+
+    /* Payroll card */
+    .payroll-card { border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; background:var(--bg2); }
+    .payroll-card:hover { border-color:rgba(201,168,76,0.2); }
+
+    /* Edit modal fields */
+    .edit-fields { display:flex; flex-direction:column; gap:12px; }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div>
+      <div class="navbar-title">Caballeros</div>
+      <div class="navbar-subtitle">Panel Administrador</div>
+    </div>
+  </div>
+  <div class="navbar-user">
+    <span class="navbar-user-name" id="adminNameDisplay"></span>
+    <button class="btn btn-ghost btn-sm" onclick="auth.logout()">Salir</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- KPIs RÁPIDOS -->
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('facturacion', this)">Facturación</button>
+    <button class="tab" onclick="switchTab('nominas', this)">Nóminas</button>
+    <button class="tab" onclick="switchTab('balance', this)">Balance</button>
+    <button class="tab" onclick="switchTab('barberos', this)">Barberos</button>
+  </div>
+
+  <!-- ═══ TAB: FACTURACIÓN ═══ -->
+  <div id="tab-facturacion" class="tab-content active">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <h3 class="card-title mb-0" style="margin-bottom:0">Facturación completa</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select id="f_barber" class="input" style="width:auto;font-size:13px;min-height:36px;padding:6px 10px"></select>
+          <input type="date" id="f_from" class="input" style="width:auto;font-size:13px;min-height:36px;padding:6px 10px">
+          <input type="date" id="f_to"   class="input" style="width:auto;font-size:13px;min-height:36px;padding:6px 10px">
+          <button class="btn btn-ghost btn-sm" onclick="loadInvoices()">Filtrar</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearInvoiceFilter()">Todos</button>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Barbero</th>
+              <th>Cliente</th>
+              <th>Servicio</th>
+              <th>Corte</th>
+              <th>Método</th>
+              <th>Barbero $</th>
+              <th>Barbería $</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="invoiceList"></tbody>
+        </table>
+      </div>
+      <div id="invoiceFooter" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: NÓMINAS ═══ -->
+  <div id="tab-nominas" class="tab-content">
+    <div class="card">
+      <h3 class="card-title">Generar nómina</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Barbero</label>
+          <select id="p_barber" class="input"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Desde</label>
+          <input type="date" id="p_from" class="input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hasta</label>
+          <input type="date" id="p_to" class="input">
+        </div>
+        <div class="form-group" style="max-width:160px">
+          <label class="form-label">&nbsp;</label>
+          <button id="btnGeneratePayroll" class="btn btn-gold">Generar</button>
+        </div>
+      </div>
+    </div>
+    <div id="payrollList"></div>
+  </div>
+
+  <!-- ═══ TAB: BALANCE ═══ -->
+  <div id="tab-balance" class="tab-content">
+    <div class="card">
+      <h3 class="card-title">Balance general</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Desde</label>
+          <input type="date" id="b_from" class="input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hasta</label>
+          <input type="date" id="b_to" class="input">
+        </div>
+        <div class="form-group" style="max-width:160px">
+          <label class="form-label">&nbsp;</label>
+          <button id="btnGenerateBalance" class="btn btn-gold">Generar</button>
+        </div>
+      </div>
+    </div>
+    <div id="balanceList"></div>
+  </div>
+
+  <!-- ═══ TAB: BARBEROS ═══ -->
+  <div id="tab-barberos" class="tab-content">
+    <!-- Agregar barbero -->
+    <div class="card">
+      <h3 class="card-title">Nuevo barbero</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input id="b_name" class="input" placeholder="Nombre visible">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Usuario</label>
+          <input id="b_username" class="input" placeholder="usuario">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input id="b_pass" class="input" type="password" placeholder="contraseña">
+        </div>
+        <div class="form-group" style="max-width:140px">
+          <label class="form-label">&nbsp;</label>
+          <button id="btnAddBarber" class="btn btn-primary">Crear</button>
+        </div>
+      </div>
+    </div>
+    <!-- Lista barberos -->
+    <div class="card">
+      <h3 class="card-title">Equipo</h3>
+      <div id="barbersList"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL EDITAR BARBERO -->
+<div id="editBarberModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h2 class="modal-title">Editar barbero</h2>
+    <input type="hidden" id="editBarberId">
+    <div class="edit-fields">
+      <div class="form-group">
+        <label class="form-label">Nombre visible</label>
+        <input id="editBarberName" class="input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nueva contraseña (dejar vacío = sin cambio)</label>
+        <input id="editBarberPass" class="input" type="password" placeholder="••••••">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveEditBarber()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="./js/admin-app.js"></script>
+</body>
+</html>

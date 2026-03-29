@@ -1,0 +1,12 @@
+{
+  "name": "Caballeros Barbería - Finanzas",
+  "short_name": "CabBarber",
+  "start_url": "/login.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2b0001",
+  "icons": [
+    { "src": "/shared/logo.png", "sizes":"192x192", "type":"image/png" },
+    { "src": "/shared/logo.png", "sizes":"512x512", "type":"image/png" }
+  ]
+}
