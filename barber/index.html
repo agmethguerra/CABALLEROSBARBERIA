@@ -26,6 +26,8 @@
     .preset-btn:hover { border-color:var(--gold); color:var(--gold); }
     .invoice-row-actions { display:flex; gap:6px; }
   </style>
+  <!-- GUARD: bloquea acceso sin sesión válida de barbero -->
+  <script>auth.guardPage('barber');</script>
 </head>
 <body>
 

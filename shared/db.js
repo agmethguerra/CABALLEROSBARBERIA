@@ -2,10 +2,10 @@
 // Misma API pública que la versión IndexedDB: add, put, getAll, getByIndex, getOne, remove
 
 /* ── COLECCIONES ─────────────────────────────────────────────────────────── */
-const STORE_BALANCES = 'balances';
-const STORE_INVOICES = 'invoices';
-const STORE_BARBERS  = 'barbers';
-const STORE_PAYROLLS = 'payrolls';
+const STORE_BALANCES = "balances";
+const STORE_INVOICES = "invoices";
+const STORE_BARBERS = "barbers";
+const STORE_PAYROLLS = "payrolls";
 
 /* ── CONFIGURACIÓN FIREBASE ──────────────────────────────────────────────── */
 // 🔧 Reemplaza con los valores de tu proyecto:
@@ -19,15 +19,18 @@ const FIREBASE_CONFIG = {
   appId: "1:61416009825:web:e38cc895752408e026fa20",
   measurementId: "G-GP3SFS5J4M",
 };
-
 /* ── INICIALIZACIÓN ──────────────────────────────────────────────────────── */
 let _db = null;
 
 function openDB() {
   if (_db) return Promise.resolve(_db);
   return new Promise((resolve, reject) => {
-    if (typeof firebase === 'undefined') {
-      reject(new Error('Firebase SDK no cargado. Verifica los <script> en los HTML.'));
+    if (typeof firebase === "undefined") {
+      reject(
+        new Error(
+          "Firebase SDK no cargado. Verifica los <script> en los HTML.",
+        ),
+      );
       return;
     }
     if (!firebase.apps.length) {
@@ -61,10 +64,10 @@ function _docToObj(doc) {
  */
 async function add(storeName, obj) {
   const col = await _col(storeName);
-  const { id, ...data } = obj;          // descarta id local si viene
+  const { id, ...data } = obj; // descarta id local si viene
   const ref = await col.add({
     ...data,
-    _createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    _createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
   return ref.id;
 }
@@ -76,11 +79,13 @@ async function add(storeName, obj) {
 async function put(storeName, obj) {
   const col = await _col(storeName);
   const { id, ...data } = obj;
-  if (!id) throw new Error('put() requiere obj.id');
-  await col.doc(String(id)).set(
-    { ...data, _updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
-    { merge: true }
-  );
+  if (!id) throw new Error("put() requiere obj.id");
+  await col
+    .doc(String(id))
+    .set(
+      { ...data, _updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true },
+    );
   return id;
 }
 
@@ -88,7 +93,7 @@ async function put(storeName, obj) {
  * getAll(storeName) → Promise<Array>
  */
 async function getAll(storeName) {
-  const col  = await _col(storeName);
+  const col = await _col(storeName);
   const snap = await col.get();
   return snap.docs.map(_docToObj);
 }
@@ -98,8 +103,8 @@ async function getAll(storeName) {
  * Equivalente al index lookup de IndexedDB.
  */
 async function getByIndex(storeName, fieldName, value) {
-  const col  = await _col(storeName);
-  const snap = await col.where(fieldName, '==', value).get();
+  const col = await _col(storeName);
+  const snap = await col.where(fieldName, "==", value).get();
   return snap.docs.map(_docToObj);
 }
 
@@ -124,6 +129,14 @@ async function remove(storeName, id) {
 /* ── EXPORTS GLOBALES (misma interfaz que antes) ─────────────────────────── */
 window.db = {
   openDB,
-  add, put, getAll, getByIndex, getOne, remove,
-  STORE_INVOICES, STORE_BARBERS, STORE_PAYROLLS, STORE_BALANCES
+  add,
+  put,
+  getAll,
+  getByIndex,
+  getOne,
+  remove,
+  STORE_INVOICES,
+  STORE_BARBERS,
+  STORE_PAYROLLS,
+  STORE_BALANCES,
 };

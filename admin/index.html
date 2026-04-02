@@ -44,6 +44,8 @@
     /* Edit modal fields */
     .edit-fields { display:flex; flex-direction:column; gap:12px; }
   </style>
+  <!-- GUARD: bloquea acceso sin sesión válida de admin -->
+  <script>auth.guardPage('admin');</script>
 </head>
 <body>
 
