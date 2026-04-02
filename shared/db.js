@@ -4,7 +4,7 @@
 /* ── COLECCIONES ─────────────────────────────────────────────────────────── */
 const STORE_BALANCES = 'balances';
 const STORE_INVOICES = 'invoices';
-const STORE_BARBERS = 'barbers';
+const STORE_BARBERS  = 'barbers';
 const STORE_PAYROLLS = 'payrolls';
 
 /* ── CONFIGURACIÓN FIREBASE ──────────────────────────────────────────────── */
@@ -88,7 +88,7 @@ async function put(storeName, obj) {
  * getAll(storeName) → Promise<Array>
  */
 async function getAll(storeName) {
-  const col = await _col(storeName);
+  const col  = await _col(storeName);
   const snap = await col.get();
   return snap.docs.map(_docToObj);
 }
@@ -98,7 +98,7 @@ async function getAll(storeName) {
  * Equivalente al index lookup de IndexedDB.
  */
 async function getByIndex(storeName, fieldName, value) {
-  const col = await _col(storeName);
+  const col  = await _col(storeName);
   const snap = await col.where(fieldName, '==', value).get();
   return snap.docs.map(_docToObj);
 }
