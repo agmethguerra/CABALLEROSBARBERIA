@@ -3,7 +3,7 @@
 /* ── SEED USUARIOS POR DEFECTO ──────────────────────────────────────────── */
 async function seedDefaultUsers() {
   await openDB();
-  const sentinel = await getOne('barbers', '__init__');
+  const sentinel = await getOne('barbers', 'seed-init');
   if (sentinel) return;
 
   const defaults = [
@@ -13,14 +13,14 @@ async function seedDefaultUsers() {
     { username: 'luis',  pass: '3333',     role: 'barber', name: 'Luis'          }
   ];
   for (const u of defaults) await add('barbers', u);
-  await put('barbers', { id: '__init__', done: true });
+  await put('barbers', { id: 'seed-init', done: true });
 }
 
 /* ── LOGIN ───────────────────────────────────────────────────────────────── */
 async function login(username, pass) {
   await openDB();
   const all = await getAll('barbers');
-  const u = all.find(x => x.id !== '__init__' && x.username === username && x.pass === pass);
+  const u = all.find(x => x.id !== 'seed-init' && x.username === username && x.pass === pass);
   if (!u) return null;
   const session = { username: u.username, role: u.role, name: u.name || u.username };
   localStorage.setItem('session', JSON.stringify(session));
