@@ -1,21 +1,22 @@
 // shared/auth.js
-// login guarda la sesión en localStorage como {username, role, displayName}
-async function seedDefaultUsers(){
+// Las credenciales se leen de Firestore (colección "barbers").
+// La sesión activa se guarda en localStorage (solo username/role/name — sin datos sensibles).
+
+async function seedDefaultUsers() {
   await openDB();
-  const b = await getAll('barbers');
-  if (b.length === 0) {
-    // usuarios por defecto (password en property 'pass')
+  const all = await getAll('barbers');
+  if (all.length === 0) {
     const defaults = [
-      { username:'admin', pass:'admin123', role:'admin', name:'Dueño - Admin' },
-      { username:'yao', pass:'1111', role:'barber', name:'Yao' },
-      { username:'jorge', pass:'2222', role:'barber', name:'Jorge' },
-      { username:'luis', pass:'3333', role:'barber', name:'Luis' }
+      { username: 'admin', pass: 'admin123', role: 'admin',  name: 'Dueño - Admin' },
+      { username: 'yao',   pass: '1111',     role: 'barber', name: 'Yao'           },
+      { username: 'jorge', pass: '2222',     role: 'barber', name: 'Jorge'         },
+      { username: 'luis',  pass: '3333',     role: 'barber', name: 'Luis'          }
     ];
     for (const u of defaults) await add('barbers', u);
   }
 }
 
-async function login(username, pass){
+async function login(username, pass) {
   await openDB();
   const all = await getAll('barbers');
   const u = all.find(x => x.username === username && x.pass === pass);
@@ -24,7 +25,14 @@ async function login(username, pass){
   localStorage.setItem('session', JSON.stringify(session));
   return session;
 }
-function currentUser(){ return JSON.parse(localStorage.getItem('session') || 'null'); }
-function logout(){ localStorage.removeItem('session'); location.href = './index.html'; }
+
+function currentUser() {
+  return JSON.parse(localStorage.getItem('session') || 'null');
+}
+
+function logout() {
+  localStorage.removeItem('session');
+  location.href = './index.html';
+}
 
 window.auth = { seedDefaultUsers, login, currentUser, logout };

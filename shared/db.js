@@ -1,94 +1,129 @@
-// shared/db.js — v3
+// shared/db.js — Firebase Firestore backend
+// Misma API pública que la versión IndexedDB: add, put, getAll, getByIndex, getOne, remove
 
-const DB_NAME    = 'caballeros_finanzas_v1';
-const DB_VERSION = 2;
-
+/* ── COLECCIONES ─────────────────────────────────────────────────────────── */
 const STORE_BALANCES = 'balances';
 const STORE_INVOICES = 'invoices';
 const STORE_BARBERS  = 'barbers';
 const STORE_PAYROLLS = 'payrolls';
 
+/* ── CONFIGURACIÓN FIREBASE ──────────────────────────────────────────────── */
+// 🔧 Reemplaza con los valores de tu proyecto:
+//    Firebase Console → Tu proyecto → ⚙️ Configuración → Agregar app web
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDvUbYOOrEQt3TFugP0rbb7T3Ctr2awQis",
+  authDomain: "caballerosbarberia-92083.firebaseapp.com",
+  projectId: "caballerosbarberia-92083",
+  storageBucket: "caballerosbarberia-92083.firebasestorage.app",
+  messagingSenderId: "61416009825",
+  appId: "1:61416009825:web:e38cc895752408e026fa20",
+  measurementId: "G-GP3SFS5J4M",
+};
+
+/* ── INICIALIZACIÓN ──────────────────────────────────────────────────────── */
 let _db = null;
 
 function openDB() {
+  if (_db) return Promise.resolve(_db);
   return new Promise((resolve, reject) => {
-    if (_db) return resolve(_db);
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('balances')) {
-        db.createObjectStore('balances', { keyPath:'id', autoIncrement:true });
-      }
-      if (!db.objectStoreNames.contains(STORE_INVOICES)) {
-        const s = db.createObjectStore(STORE_INVOICES, { keyPath:'id', autoIncrement:true });
-        s.createIndex('date',   'date',   { unique:false });
-        s.createIndex('barber', 'barber', { unique:false });
-      }
-      if (!db.objectStoreNames.contains(STORE_BARBERS)) {
-        const s = db.createObjectStore(STORE_BARBERS, { keyPath:'id', autoIncrement:true });
-        s.createIndex('username', 'username', { unique:true });
-      }
-      if (!db.objectStoreNames.contains(STORE_PAYROLLS)) {
-        db.createObjectStore(STORE_PAYROLLS, { keyPath:'id', autoIncrement:true });
-      }
-    };
-    req.onsuccess = (e) => { _db = e.target.result; resolve(_db); };
-    req.onerror   = (e) => reject(e);
+    if (typeof firebase === 'undefined') {
+      reject(new Error('Firebase SDK no cargado. Verifica los <script> en los HTML.'));
+      return;
+    }
+    if (!firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    _db = firebase.firestore();
+    resolve(_db);
   });
 }
 
-function tx(storeName, mode = 'readonly') {
-  return openDB().then(db => db.transaction(storeName, mode).objectStore(storeName));
+/* ── HELPERS INTERNOS ────────────────────────────────────────────────────── */
+async function _col(storeName) {
+  const db = await openDB();
+  return db.collection(storeName);
 }
 
+// Convierte un Firestore doc snapshot en objeto plano con campo `id`
+function _docToObj(doc) {
+  const data = doc.data();
+  // Quita campos internos de Firestore (_createdAt, _updatedAt)
+  delete data._createdAt;
+  delete data._updatedAt;
+  return { id: doc.id, ...data };
+}
+
+/* ── CRUD PÚBLICO ────────────────────────────────────────────────────────── */
+
+/**
+ * add(storeName, obj) → Promise<string>  (Firestore auto-id)
+ * Si obj.id existe lo descarta para no chocar con el auto-id de Firestore.
+ */
 async function add(storeName, obj) {
-  const store = await tx(storeName, 'readwrite');
-  return new Promise((res, rej) => {
-    const r = store.add(obj);
-    r.onsuccess = () => res(r.result);
-    r.onerror   = (e) => rej(e);
+  const col = await _col(storeName);
+  const { id, ...data } = obj;          // descarta id local si viene
+  const ref = await col.add({
+    ...data,
+    _createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
-}
-async function put(storeName, obj) {
-  const store = await tx(storeName, 'readwrite');
-  return new Promise((res, rej) => {
-    const r = store.put(obj);
-    r.onsuccess = () => res(r.result);
-    r.onerror   = (e) => rej(e);
-  });
-}
-async function getAll(storeName) {
-  const store = await tx(storeName, 'readonly');
-  return new Promise((res, rej) => {
-    const r = store.getAll();
-    r.onsuccess = () => res(r.result || []);
-    r.onerror   = (e) => rej(e);
-  });
-}
-async function getByIndex(storeName, indexName, value) {
-  const store = await tx(storeName, 'readonly');
-  return new Promise((res, rej) => {
-    const idx = store.index(indexName);
-    const r   = idx.getAll(value);
-    r.onsuccess = () => res(r.result || []);
-    r.onerror   = (e) => rej(e);
-  });
-}
-async function getOne(storeName, id) {
-  const store = await tx(storeName, 'readonly');
-  return new Promise((res, rej) => {
-    const r = store.get(Number(id));
-    r.onsuccess = () => res(r.result);
-    r.onerror   = (e) => rej(e);
-  });
-}
-async function remove(storeName, id) {
-  const store = await tx(storeName, 'readwrite');
-  return new Promise((res, rej) => {
-    const r = store.delete(Number(id));
-    r.onsuccess = () => res(true);
-    r.onerror   = (e) => rej(e);
-  });
+  return ref.id;
 }
 
-window.db = { openDB, add, put, getAll, getByIndex, getOne, remove, STORE_INVOICES, STORE_BARBERS, STORE_PAYROLLS, STORE_BALANCES };
+/**
+ * put(storeName, obj) → Promise<id>
+ * Requiere obj.id. Sobreescribe / hace merge del documento.
+ */
+async function put(storeName, obj) {
+  const col = await _col(storeName);
+  const { id, ...data } = obj;
+  if (!id) throw new Error('put() requiere obj.id');
+  await col.doc(String(id)).set(
+    { ...data, _updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+    { merge: true }
+  );
+  return id;
+}
+
+/**
+ * getAll(storeName) → Promise<Array>
+ */
+async function getAll(storeName) {
+  const col  = await _col(storeName);
+  const snap = await col.get();
+  return snap.docs.map(_docToObj);
+}
+
+/**
+ * getByIndex(storeName, fieldName, value) → Promise<Array>
+ * Equivalente al index lookup de IndexedDB.
+ */
+async function getByIndex(storeName, fieldName, value) {
+  const col  = await _col(storeName);
+  const snap = await col.where(fieldName, '==', value).get();
+  return snap.docs.map(_docToObj);
+}
+
+/**
+ * getOne(storeName, id) → Promise<Object|undefined>
+ */
+async function getOne(storeName, id) {
+  const col = await _col(storeName);
+  const doc = await col.doc(String(id)).get();
+  return doc.exists ? _docToObj(doc) : undefined;
+}
+
+/**
+ * remove(storeName, id) → Promise<true>
+ */
+async function remove(storeName, id) {
+  const col = await _col(storeName);
+  await col.doc(String(id)).delete();
+  return true;
+}
+
+/* ── EXPORTS GLOBALES (misma interfaz que antes) ─────────────────────────── */
+window.db = {
+  openDB,
+  add, put, getAll, getByIndex, getOne, remove,
+  STORE_INVOICES, STORE_BARBERS, STORE_PAYROLLS, STORE_BALANCES
+};
