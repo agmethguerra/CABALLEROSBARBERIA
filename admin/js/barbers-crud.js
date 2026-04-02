@@ -20,8 +20,8 @@ async function renderBarbers(){
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid #eee">
       <div><strong>${b.name||b.username}</strong><div class="small-muted">${b.username} • ${b.role}</div></div>
       <div>
-        <button class="btn" onclick="editBarber(${b.id})">Editar</button>
-        <button class="btn" style="background:#e53935;color:#fff" onclick="deleteBarber(${b.id})">Eliminar</button>
+        <button class="btn" onclick="editBarber('${b.id}')">Editar</button>
+        <button class="btn" style="background:#e53935;color:#fff" onclick="deleteBarber('${b.id}')">Eliminar</button>
       </div>
     </div>
   `).join('');

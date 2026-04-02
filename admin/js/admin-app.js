@@ -133,7 +133,7 @@ async function loadInvoices() {
       <td class="text-success">${utils.formatCurrency(i.barbero)}</td>
       <td class="text-gold">${utils.formatCurrency(i.barberia)}</td>
       <td>
-        <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${i.id})">✕</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${i.id}')">✕</button>
       </td>
     </tr>
   `).join('');
@@ -215,7 +215,7 @@ async function renderSavedPayrolls() {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick='exportPayrollToPDF(${JSON.stringify(p)})'>📄 PDF</button>
-        <button class="btn btn-danger btn-sm" onclick="deletePayroll(${p.id})">Eliminar</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePayroll('${p.id}')">Eliminar</button>
       </div>
     </div>
   `).join('');
@@ -291,7 +291,7 @@ async function renderSavedBalances() {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick='exportBalanceToPDF(${JSON.stringify(b)})'>📄 PDF</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteBalance(${b.id})">Eliminar</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteBalance('${b.id}')">Eliminar</button>
         </div>
       </div>
 
@@ -339,8 +339,8 @@ function renderBarbersAdmin(list) {
         <div class="barber-meta">@${b.username} · <span class="badge badge-${b.role === 'admin' ? 'gold' : 'muted'}">${b.role}</span></div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="openEditModal(${b.id})">✏️ Editar</button>
-        ${b.role !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteBarber(${b.id})">Eliminar</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="openEditModal('${b.id}')">✏️ Editar</button>
+        ${b.role !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteBarber('${b.id}')">Eliminar</button>` : ''}
       </div>
     </div>
   `).join('');
@@ -380,7 +380,7 @@ function closeEditModal() {
 }
 
 async function saveEditBarber() {
-  const id   = Number(document.getElementById('editBarberId').value);
+  const id = document.getElementById('editBarberId').value;
   const b    = await getOne('barbers', id);
   b.name     = document.getElementById('editBarberName').value.trim() || b.name;
   const pass = document.getElementById('editBarberPass').value.trim();
