@@ -12,7 +12,7 @@ async function checkAdmin(){
 }
 
 async function renderBarbers(){
-  const list = await getAll('barbers');
+  const list = (await getAll('barbers')).filter(b => b.id !== 'seed-init');
   const container = document.getElementById('barbersList');
   const sel1 = document.getElementById('f_barber');
   const sel2 = document.getElementById('p_barber');

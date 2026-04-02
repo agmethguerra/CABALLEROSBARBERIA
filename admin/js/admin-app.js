@@ -78,7 +78,8 @@ async function renderKPIs() {
 
 /* ── BARBERS SELECT ────────────────────────────────────────── */
 async function loadBarbers() {
-  const barbers = await getAll('barbers');
+  const all     = await getAll('barbers');
+  const barbers = all.filter(b => b.id !== 'seed-init');
 
   const selects = ['p_barber', 'f_barber'];
   selects.forEach(id => {
